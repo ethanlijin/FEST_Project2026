@@ -1856,6 +1856,12 @@ def main():
     root.geometry(f"{sw}x{sh}+0+0")
     root.resizable(True, True)
     show_welcome()
+    root.update_idletasks()
+    root.deiconify()
+    root.lift()
+    root.attributes("-topmost", True)
+    root.after(250, lambda: root.attributes("-topmost", False))
+    root.after(300, root.focus_force)
     root.mainloop()
 
 
