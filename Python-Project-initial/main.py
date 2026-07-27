@@ -20,21 +20,25 @@ GPA_SCALE_FILE = os.path.join(BASE_DIR, "gpa_scale.json")
 STUDENT_FIELDS = ["student_id", "name", "major", "course_code", "course_title", "points", "gpa"]
 
 # ── Color palette ─────────────────────────────────────────────────────────────
-BG     = "#0d0d1a"
-PANEL  = "#16213e"
-CARD   = "#1a1a35"
-ACCENT = "#7c3aed"
-CYAN   = "#22d3ee"
-TEAL   = "#0d7377"
-TEXT   = "#f1f5f9"
-MUTED  = "#94a3b8"
-GREEN  = "#10b981"
-RED    = "#ef4444"
-BORDER = "#2a2a4a"
+BG        = "#0f172a"
+PANEL     = "#111827"
+CARD      = "#1e293b"
+ACCENT    = "#3b82f6"
+CYAN      = "#60a5fa"
+TEAL      = "#2563eb"
+TEXT      = "#f8fafc"
+MUTED     = "#94a3b8"
+GREEN     = "#22c55e"
+RED       = "#ef4444"
+BORDER    = "#334155"
+SECONDARY = "#374151"
+SIDEBAR_BUTTON_BG = "#f8fafc"
+SIDEBAR_BUTTON_HOVER = "#e2e8f0"
+SIDEBAR_BUTTON_TEXT = "#111827"
 
 OPTION_COLORS = [
-    "#7c3aed", "#0d7377", "#b45309", "#1d4ed8", "#be185d", "#065f46",
-    "#9d174d", "#0e7490", "#1e3a5f", "#15803d",
+    ACCENT, ACCENT, RED, ACCENT, ACCENT,
+    ACCENT, ACCENT, ACCENT, ACCENT, ACCENT,
 ]
 OPTION_LABELS = [
     "Add Student", "Edit Student", "Delete Record",
@@ -64,6 +68,9 @@ GRADE_PALETTE = {
 # ── App-level state ───────────────────────────────────────────────────────────
 root         = None
 current_user = None
+delete_undo_state = None
+undo_delete_button = None
+dashboard_stat_vars = {}
 
 
 # =============================================================================
@@ -155,12 +162,36 @@ def load_students():
 def save_students(records):
     df = pd.DataFrame(records, columns=STUDENT_FIELDS)
     df.to_csv(STUDENTS_FILE, index=False)
+    refresh_dashboard_stats()
 
 
 def append_student(rec):
     exists = os.path.exists(STUDENTS_FILE)
     row = pd.DataFrame([rec], columns=STUDENT_FIELDS)
     row.to_csv(STUDENTS_FILE, mode="a", header=not exists, index=False)
+    refresh_dashboard_stats()
+
+
+def refresh_dashboard_stats():
+    if not dashboard_stat_vars:
+        return
+
+    records = load_students()
+    gpa_values = []
+    for record in records:
+        try:
+            gpa_values.append(float(record["gpa"]))
+        except (ValueError, TypeError):
+            pass
+
+    values = {
+        "students": str(len({record["student_id"] for record in records})),
+        "enrollments": str(len(records)),
+        "majors": str(len({record["major"] for record in records})),
+        "gpa": f"{sum(gpa_values) / len(gpa_values):.2f}" if gpa_values else "0.00",
+    }
+    for key, value in values.items():
+        dashboard_stat_vars[key].set(value)
 
 
 # =============================================================================
@@ -211,8 +242,8 @@ def make_button(parent, text, cmd, color=None, width=260, height=54, radius=26, 
         cv.create_rectangle(x1,   y1+r,  x2,   y2-r,  fill=c, outline=c)
         # Hover: subtle white inner ring
         if hover:
-            cv.create_arc(x1+3,     y1+3,     x1+2*r, y1+2*r, start=90,  extent=90, outline="#ffff30", style="arc", width=2)
-            cv.create_arc(x2-2*r,   y1+3,     x2-3,   y1+2*r, start=0,   extent=90, outline="#ffff30", style="arc", width=2)
+            cv.create_arc(x1+3,     y1+3,     x1+2*r, y1+2*r, start=90,  extent=90, outline=CYAN, style="arc", width=2)
+            cv.create_arc(x2-2*r,   y1+3,     x2-3,   y1+2*r, start=0,   extent=90, outline=CYAN, style="arc", width=2)
         # Label
         cv.create_text(width // 2, height // 2, text=text,
                        fill=fg, font=("Segoe UI", 13, "bold"))
@@ -244,6 +275,17 @@ def make_link(parent, text, cmd):
         fg=CYAN, bg=parent.cget("bg"),
         activeforeground=CYAN, activebackground=parent.cget("bg"),
         relief="flat", cursor="hand2", bd=0,
+    )
+
+
+def make_sidebar_button(parent, text, cmd, danger=False):
+    color = RED if danger else SIDEBAR_BUTTON_TEXT
+    return tk.Button(
+        parent, text=text, command=cmd,
+        font=("Segoe UI", 11, "bold"), fg=color, bg=SIDEBAR_BUTTON_BG,
+        activeforeground=color, activebackground=SIDEBAR_BUTTON_HOVER,
+        relief="flat", bd=0, anchor="w", padx=18, pady=9,
+        cursor="hand2",
     )
 
 
@@ -339,8 +381,41 @@ def footer_close_btn(parent, cmd, label="✕  Exit App"):
     bar = tk.Frame(parent, bg=PANEL)
     bar.pack(fill="x", side="bottom")
     tk.Frame(bar, bg=BORDER, height=1).pack(fill="x")
-    make_button(bar, label, cmd, color="#374151", width=160, height=44, radius=22).pack(
+    make_button(bar, label, cmd, color=SECONDARY, width=160, height=44, radius=22).pack(
         side="right", padx=24, pady=10)
+
+
+def update_undo_delete_button():
+    if undo_delete_button is None or not undo_delete_button.winfo_exists():
+        return
+    count = len(delete_undo_state["items"]) if delete_undo_state else 0
+    undo_delete_button.config(
+        text=f"↶  Undo delete ({count})" if count else "↶  Undo delete",
+        state="normal" if count else "disabled",
+    )
+
+
+def undo_last_delete(parent=None):
+    global delete_undo_state
+    if not delete_undo_state:
+        messagebox.showinfo("Nothing to Undo",
+                            "There is no recent deletion to restore.",
+                            parent=parent or root)
+        return False
+
+    records = load_students()
+    deleted_items = delete_undo_state["items"]
+    for index, record in sorted(deleted_items, key=lambda item: item[0]):
+        records.insert(min(index, len(records)), record)
+    save_students(records)
+
+    restored_count = len(deleted_items)
+    delete_undo_state = None
+    update_undo_delete_button()
+    messagebox.showinfo("Deletion Undone",
+                        f"Restored {restored_count} enrollment record(s).",
+                        parent=parent or root)
+    return True
 
 
 # =============================================================================
@@ -483,52 +558,131 @@ def show_login():
 # =============================================================================
 
 def show_menu():
+    global dashboard_stat_vars, undo_delete_button
     clear_screen()
-    root.title(f"FEST — Menu  ({current_user})")
+    root.title(f"FEST Student Manager — {current_user}")
 
-    # Header bar
-    hdr = tk.Frame(root, bg=PANEL)
-    hdr.pack(fill="x")
-    tk.Frame(hdr, bg=ACCENT, height=4).pack(fill="x")
-    row = tk.Frame(hdr, bg=PANEL)
-    row.pack(fill="x", padx=20, pady=12)
-    make_label(row, f"Logged in as:  {current_user}", 13,
-               bold=True, color=CYAN).pack(side="left")
-    make_button(row, "Logout", do_logout, color="#374151",
-                width=120, height=42, radius=21).pack(side="right")
+    shell = tk.Frame(root, bg=BG)
+    shell.pack(fill="both", expand=True)
 
-    # Option grid
-    body = tk.Frame(root, bg=BG)
-    body.pack(expand=True, fill="both", padx=40, pady=20)
-    make_label(body, "Main Menu  —  click a button or press 0–9",
-               12, color=MUTED).pack(pady=(0, 18))
+    sidebar = tk.Frame(shell, bg=PANEL, width=245)
+    sidebar.pack(side="left", fill="y")
+    sidebar.pack_propagate(False)
 
-    grid = tk.Frame(body, bg=BG)
-    grid.pack()
-    for i in range(10):
-        r, c = divmod(i, 2)
-        color = OPTION_COLORS[i]
+    brand = tk.Frame(sidebar, bg=PANEL)
+    brand.pack(fill="x", padx=18, pady=(22, 16))
+    make_label(brand, "FEST", 26, bold=True, color=ACCENT).pack(anchor="w")
+    make_label(brand, "Student Manager", 10, color=MUTED).pack(anchor="w")
 
-        # Colored border frame → dark inner frame → canvas button
-        border = tk.Frame(grid, bg=color, padx=2, pady=2)
-        border.grid(row=r, column=c, padx=14, pady=10)
-        inner = tk.Frame(border, bg=CARD)
-        inner.pack()
+    tk.Frame(sidebar, bg=BORDER, height=1).pack(fill="x", padx=14, pady=(0, 10))
 
-        make_button(
-            inner,
-            text=f"  [ {i} ]   {OPTION_LABELS[i]}  ",
-            cmd=lambda n=i: handle_option(n),
-            color=CARD, fg=color,
-            width=310, height=65, radius=0,   # radius=0: flat inside border frame
-        ).pack()
+    make_label(sidebar, "STUDENTS", 9, bold=True, color=MUTED).pack(
+        anchor="w", padx=18, pady=(4, 2))
+    for label, option, danger in [
+        ("＋  Add student", 0, False),
+        ("✎  Edit records", 1, False),
+        ("⌫  Delete records", 2, True),
+        ("▤  Student profiles", 7, False),
+        ("▣  Student ID cards", 8, False),
+    ]:
+        make_sidebar_button(
+            sidebar, label, lambda n=option: handle_option(n), danger=danger
+        ).pack(fill="x", padx=8)
 
-    root.bind("<Key>", lambda e: (
-        handle_option(int(e.char)) if e.char in "0123456789" else None
-    ))
+    make_label(sidebar, "ACADEMICS", 9, bold=True, color=MUTED).pack(
+        anchor="w", padx=18, pady=(14, 2))
+    for label, option in [
+        ("ƒ  GPA scale", 3),
+        ("•  Score distribution", 4),
+        ("▥  Major enrollment", 5),
+        ("◕  Grade distribution", 6),
+        ("?  Academic queries", 9),
+    ]:
+        make_sidebar_button(
+            sidebar, label, lambda n=option: handle_option(n)
+        ).pack(fill="x", padx=8)
 
-    # Footer close = quit
-    footer_close_btn(root, root.destroy, label="✕  Quit App")
+    undo_delete_button = tk.Button(
+        sidebar, text="↶  Undo delete", command=undo_last_delete,
+        font=("Segoe UI", 10, "bold"), fg=SIDEBAR_BUTTON_TEXT,
+        bg=SIDEBAR_BUTTON_BG, activeforeground=SIDEBAR_BUTTON_TEXT,
+        activebackground=SIDEBAR_BUTTON_HOVER,
+        disabledforeground="#64748b", relief="flat", bd=0,
+        anchor="w", padx=16, pady=9, cursor="hand2",
+    )
+    undo_delete_button.pack(fill="x", side="bottom", padx=12, pady=(0, 8))
+    update_undo_delete_button()
+
+    account = tk.Frame(sidebar, bg=PANEL)
+    account.pack(fill="x", side="bottom", padx=12, pady=(8, 10))
+    tk.Frame(account, bg=BORDER, height=1).pack(fill="x", pady=(0, 10))
+    make_label(account, current_user, 10, bold=True).pack(anchor="w", padx=6)
+    make_label(account, "Signed in", 9, color=MUTED).pack(anchor="w", padx=6)
+    make_sidebar_button(account, "Log out", do_logout).pack(fill="x", pady=(5, 0))
+
+    content = tk.Frame(shell, bg=BG)
+    content.pack(side="left", fill="both", expand=True)
+
+    header = tk.Frame(content, bg=BG)
+    header.pack(fill="x", padx=34, pady=(28, 12))
+    make_label(header, "Dashboard", 26, bold=True).pack(anchor="w")
+    make_label(header, "Manage students and review academic performance.",
+               11, color=MUTED).pack(anchor="w", pady=(4, 0))
+
+    dashboard_stat_vars = {
+        "students": tk.StringVar(),
+        "enrollments": tk.StringVar(),
+        "majors": tk.StringVar(),
+        "gpa": tk.StringVar(),
+    }
+    refresh_dashboard_stats()
+
+    stats = tk.Frame(content, bg=BG)
+    stats.pack(fill="x", padx=28, pady=12)
+    for column in range(4):
+        stats.columnconfigure(column, weight=1)
+
+    for column, (key, label) in enumerate([
+        ("students", "Students"),
+        ("enrollments", "Enrollments"),
+        ("majors", "Majors"),
+        ("gpa", "Average GPA"),
+    ]):
+        card = tk.Frame(stats, bg=CARD, highlightbackground=BORDER,
+                        highlightthickness=1)
+        card.grid(row=0, column=column, sticky="nsew", padx=6)
+        make_label(card, "", 24, bold=True, color=ACCENT,
+                   textvariable=dashboard_stat_vars[key]).pack(
+            anchor="w", padx=18, pady=(16, 2))
+        make_label(card, label, 10, color=MUTED).pack(
+            anchor="w", padx=18, pady=(0, 16))
+
+    workspace = tk.Frame(content, bg=CARD, highlightbackground=BORDER,
+                         highlightthickness=1)
+    workspace.pack(fill="both", expand=True, padx=34, pady=(16, 34))
+    make_label(workspace, "Quick actions", 17, bold=True).pack(
+        anchor="w", padx=24, pady=(22, 4))
+    make_label(workspace,
+               "Use the sidebar for all tools, or start with a common task.",
+               10, color=MUTED).pack(anchor="w", padx=24)
+
+    quick_actions = tk.Frame(workspace, bg=CARD)
+    quick_actions.pack(anchor="w", padx=16, pady=22)
+    make_button(quick_actions, "Add Student", opt_add_student,
+                color=ACCENT, width=180, height=50, radius=12).pack(
+                    side="left", padx=8)
+    make_button(quick_actions, "Edit Records", opt_edit_student,
+                color=SECONDARY, width=180, height=50, radius=12).pack(
+                    side="left", padx=8)
+    make_button(quick_actions, "View Profiles", opt_student_profile,
+                color=SECONDARY, width=180, height=50, radius=12).pack(
+                    side="left", padx=8)
+
+    def handle_keyboard_shortcut(event):
+        if len(event.char) == 1 and event.char in "0123456789":
+            handle_option(int(event.char))
+
+    root.bind("<Key>", handle_keyboard_shortcut)
 
 
 def handle_option(n):
@@ -623,7 +777,7 @@ def opt_add_student():
     make_button(btn_row, "Add Student", do_add,
                 color=ACCENT, width=200, height=52, radius=26).pack(side="left", padx=8)
     make_button(btn_row, "Close", top.destroy,
-                color="#374151", width=130, height=52, radius=26).pack(side="left", padx=8)
+                color=SECONDARY, width=130, height=52, radius=26).pack(side="left", padx=8)
 
 
 # =============================================================================
@@ -719,14 +873,14 @@ def opt_edit_student():
         make_button(btn_row, "Save Changes", do_save,
                     color=GREEN, width=200, height=52, radius=26).pack(side="left", padx=8)
         make_button(btn_row, "Cancel", win.destroy,
-                    color="#374151", width=130, height=52, radius=26).pack(side="left", padx=8)
+                    color=SECONDARY, width=130, height=52, radius=26).pack(side="left", padx=8)
 
     btn_row = tk.Frame(top, bg=BG)
     btn_row.pack(pady=10)
     make_button(btn_row, "Edit Selected", open_edit_form,
                 color=OPTION_COLORS[1], width=200, height=52, radius=26).pack(side="left", padx=8)
     make_button(btn_row, "Close", top.destroy,
-                color="#374151", width=130, height=52, radius=26).pack(side="left", padx=8)
+                color=SECONDARY, width=130, height=52, radius=26).pack(side="left", padx=8)
 
 
 # =============================================================================
@@ -737,36 +891,64 @@ def opt_delete_student():
     top = make_popup("Delete Student Records", w=820, h=560)
     tk.Frame(top, bg=RED, height=5).pack(fill="x")
     make_label(top, "Delete Student Records", 15, bold=True).pack(pady=10)
-    make_label(top, "Hold Ctrl / Shift to select multiple rows", 11, color=MUTED).pack()
+    make_label(top,
+               "Select carefully. The most recent deletion can be restored with Undo.",
+               11, color=MUTED).pack()
 
     records = load_students()
     tree, refresh_tree = build_treeview(top, records, multi=True)
 
     def do_delete():
+        global delete_undo_state
         sel = tree.selection()
         if not sel:
             messagebox.showwarning("Select", "Select at least one record.", parent=top)
             return
-        indices = {int(item) for item in sel}
+        indices = sorted({int(item) for item in sel})
+        selected_records = [(index, dict(records[index])) for index in indices]
+        preview_lines = [
+            f"• {record['name']} — {record['course_code']}"
+            for _, record in selected_records[:5]
+        ]
+        if len(selected_records) > 5:
+            preview_lines.append(f"• …and {len(selected_records) - 5} more")
+        preview = "\n".join(preview_lines)
         if not messagebox.askyesno(
             "Confirm Delete",
-            f"Permanently delete {len(indices)} record(s)?\nThis cannot be undone.",
+            f"Delete {len(indices)} enrollment record(s)?\n\n"
+            f"{preview}\n\n"
+            "You can undo this deletion during the current session.",
             parent=top,
         ):
             return
-        new_recs = [r for i, r in enumerate(records) if i not in indices]
+        delete_undo_state = {"items": selected_records}
+        new_recs = [r for i, r in enumerate(records) if i not in set(indices)]
         records.clear()
         records.extend(new_recs)
         save_students(records)
         refresh_tree()
-        messagebox.showinfo("Deleted", f"{len(indices)} record(s) removed.", parent=top)
+        update_undo_delete_button()
+        messagebox.showinfo(
+            "Records Deleted",
+            f"{len(indices)} record(s) removed.\n"
+            "Choose Undo here or in the sidebar to restore them.",
+            parent=top,
+        )
+
+    def do_undo():
+        if undo_last_delete(top):
+            records.clear()
+            records.extend(load_students())
+            refresh_tree()
 
     btn_row = tk.Frame(top, bg=BG)
     btn_row.pack(pady=12)
     make_button(btn_row, "Delete Selected", do_delete,
                 color=RED, width=210, height=52, radius=26).pack(side="left", padx=8)
+    make_button(btn_row, "Undo Delete", do_undo,
+                color=SECONDARY, width=160, height=52, radius=26).pack(side="left", padx=8)
     make_button(btn_row, "Close", top.destroy,
-                color="#374151", width=130, height=52, radius=26).pack(side="left", padx=8)
+                color=SECONDARY, width=130, height=52, radius=26).pack(side="left", padx=8)
 
 
 # =============================================================================
@@ -890,13 +1072,13 @@ def opt_gpa_formula():
     make_button(input_row, "Save Row", save_row,
                 color=GREEN, width=130, height=44, radius=22).pack(side="left", padx=4)
     make_button(input_row, "Reset Defaults", reset_defaults,
-                color="#374151", width=170, height=44, radius=22).pack(side="left", padx=4)
+                color=SECONDARY, width=170, height=44, radius=22).pack(side="left", padx=4)
 
     # ── Footer ────────────────────────────────────────────────────────────────
     make_label(top, "Cumulative GPA = Σ(GPA × credit hrs) ÷ Σ(credit hrs)",
                11, color=CYAN).pack(pady=(6, 2))
     make_button(top, "Close", top.destroy,
-                color="#374151", width=150, height=50, radius=25).pack(pady=8)
+                color=SECONDARY, width=150, height=50, radius=25).pack(pady=8)
 
 
 # =============================================================================
@@ -924,10 +1106,10 @@ def opt_swarm_plot():
     cats  = [grade_category(p) for p in pts]
 
     fig, ax = plt.subplots(figsize=(9.2, 5.4))
-    fig.patch.set_facecolor("#0d0d1a")
-    ax.set_facecolor("#1a1a35")
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(CARD)
     for spine in ax.spines.values():
-        spine.set_color("#2a2a4a")
+        spine.set_color(BORDER)
     ax.tick_params(colors="#94a3b8")
     ax.set_title("Student Score Distribution (Swarm Plot)",
                  color="#f1f5f9", fontsize=13, fontweight="bold", pad=12)
@@ -939,12 +1121,12 @@ def opt_swarm_plot():
         df = pd.DataFrame({"Points": pts, "Course": codes, "Grade": cats})
         sns.swarmplot(data=df, x="Course", y="Points", hue="Grade",
                       palette=GRADE_PALETTE, ax=ax, size=9,
-                      linewidth=0.5, edgecolor="#0d0d1a",
+                      linewidth=0.5, edgecolor=BG,
                       hue_order=list(GRADE_PALETTE.keys()))
         leg = ax.get_legend()
         if leg:
-            leg.get_frame().set_facecolor("#16213e")
-            leg.get_frame().set_edgecolor("#2a2a4a")
+            leg.get_frame().set_facecolor(PANEL)
+            leg.get_frame().set_edgecolor(BORDER)
             leg.set_title("Grade", prop={"size": 9})
             leg.get_title().set_color("#94a3b8")
             for t in leg.get_texts():
@@ -956,12 +1138,12 @@ def opt_swarm_plot():
         xs     = [x_map[c] + rng.uniform(-0.25, 0.25) for c in codes]
         colors = [GRADE_PALETTE[g] for g in cats]
         ax.scatter(xs, pts, c=colors, s=90, alpha=0.9,
-                   edgecolors="#0d0d1a", linewidths=0.5)
+                   edgecolors=BG, linewidths=0.5)
         ax.set_xticks(range(len(unique)))
         ax.set_xticklabels(unique, color="#94a3b8")
         from matplotlib.patches import Patch
         handles = [Patch(facecolor=c, label=l) for l, c in GRADE_PALETTE.items()]
-        leg = ax.legend(handles=handles, facecolor="#16213e", edgecolor="#2a2a4a")
+        leg = ax.legend(handles=handles, facecolor=PANEL, edgecolor=BORDER)
         for t in leg.get_texts():
             t.set_color("#f1f5f9")
 
@@ -971,7 +1153,7 @@ def opt_swarm_plot():
 
     plt.tight_layout(pad=1.5)
 
-    toolbar_frame = tk.Frame(top, bg="#16213e")
+    toolbar_frame = tk.Frame(top, bg=PANEL)
     toolbar_frame.pack(fill="x", side="bottom")
 
     def on_close():
@@ -979,7 +1161,7 @@ def opt_swarm_plot():
         top.destroy()
 
     make_button(toolbar_frame, "Close", on_close,
-                color="#374151", width=120, height=42, radius=21).pack(
+                color=SECONDARY, width=120, height=42, radius=21).pack(
                     side="right", padx=12, pady=6)
 
     canvas = FigureCanvasTkAgg(fig, master=top)
@@ -1014,10 +1196,10 @@ def opt_countplot():
     counts = [major_counts[m] for m in majors]
 
     fig, ax = plt.subplots(figsize=(9.2, 5.4))
-    fig.patch.set_facecolor("#0d0d1a")
-    ax.set_facecolor("#1a1a35")
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(CARD)
     for spine in ax.spines.values():
-        spine.set_color("#2a2a4a")
+        spine.set_color(BORDER)
     ax.tick_params(colors="#94a3b8")
     ax.set_title("Number of Students per Major",
                  color="#f1f5f9", fontsize=13, fontweight="bold", pad=12)
@@ -1028,17 +1210,16 @@ def opt_countplot():
         df = pd.DataFrame({"Major": majors, "Count": counts})
         df = df.sort_values("Count", ascending=False)
         sns.barplot(data=df, x="Major", y="Count", palette="viridis",
-                    ax=ax, edgecolor="#0d0d1a", linewidth=0.8)
+                    ax=ax, edgecolor=BG, linewidth=0.8)
         for bar, count in zip(ax.patches, df["Count"]):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05,
                     str(count), ha="center", va="bottom",
                     color="#f1f5f9", fontsize=11, fontweight="bold")
     else:
-        bar_colors = ["#7c3aed", "#0d7377", "#b45309", "#1d4ed8",
-                      "#be185d", "#065f46", "#92400e", "#1e3a5f"]
+        bar_colors = [ACCENT, CYAN, TEAL, GREEN, "#f59e0b"]
         bars = ax.bar(majors, counts,
                       color=[bar_colors[i % len(bar_colors)] for i in range(len(majors))],
-                      edgecolor="#0d0d1a", linewidth=0.8)
+                      edgecolor=BG, linewidth=0.8)
         for bar, count in zip(bars, counts):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05,
                     str(count), ha="center", va="bottom",
@@ -1051,7 +1232,7 @@ def opt_countplot():
     plt.xticks(rotation=20, ha="right")
     plt.tight_layout(pad=1.5)
 
-    toolbar_frame = tk.Frame(top, bg="#16213e")
+    toolbar_frame = tk.Frame(top, bg=PANEL)
     toolbar_frame.pack(fill="x", side="bottom")
 
     def on_close():
@@ -1059,7 +1240,7 @@ def opt_countplot():
         top.destroy()
 
     make_button(toolbar_frame, "Close", on_close,
-                color="#374151", width=120, height=42, radius=21).pack(
+                color=SECONDARY, width=120, height=42, radius=21).pack(
                     side="right", padx=12, pady=6)
 
     canvas = FigureCanvasTkAgg(fig, master=top)
@@ -1112,8 +1293,8 @@ def opt_piechart():
     explode     = [0.08 if i == explode_idx else 0 for i in range(len(sizes))]
 
     fig, ax = plt.subplots(figsize=(9.8, 7.0))
-    fig.patch.set_facecolor("#0d0d1a")
-    ax.set_facecolor("#0d0d1a")
+    fig.patch.set_facecolor(BG)
+    ax.set_facecolor(BG)
 
     def _darken(hex_color, factor=0.55):
         hex_color = hex_color.lstrip("#")
@@ -1148,7 +1329,7 @@ def opt_piechart():
         explode=explode,
         startangle=140,
         shadow=True,
-        wedgeprops={"edgecolor": "#0d0d1a", "linewidth": 2},
+        wedgeprops={"edgecolor": BG, "linewidth": 2},
         pctdistance=0.72,
         textprops={"fontsize": 11},
     )
@@ -1168,8 +1349,8 @@ def opt_piechart():
                     bbox_to_anchor=(1.02, 0.5),
                     frameon=True,
                     framealpha=0.9,
-                    facecolor="#16213e",
-                    edgecolor="#2a2a4a",
+                    facecolor=PANEL,
+                    edgecolor=BORDER,
                     fontsize=11)
     for text in leg.get_texts():
         text.set_color("#f1f5f9")
@@ -1179,7 +1360,7 @@ def opt_piechart():
 
     plt.tight_layout()
 
-    toolbar_frame = tk.Frame(top, bg="#16213e")
+    toolbar_frame = tk.Frame(top, bg=PANEL)
     toolbar_frame.pack(fill="x", side="bottom")
 
     def on_close():
@@ -1187,7 +1368,7 @@ def opt_piechart():
         top.destroy()
 
     make_button(toolbar_frame, "Close", on_close,
-                color="#374151", width=120, height=42, radius=21).pack(
+                color=SECONDARY, width=120, height=42, radius=21).pack(
                     side="right", padx=12, pady=6)
 
     canvas = FigureCanvasTkAgg(fig, master=top)
@@ -1325,7 +1506,7 @@ def opt_student_profile():
     next_btn.pack(side="left", padx=10)
 
     make_button(inner_nav, "Close", top.destroy,
-                color="#374151", width=110, height=46, radius=23).pack(side="left", padx=20)
+                color=SECONDARY, width=110, height=46, radius=23).pack(side="left", padx=20)
 
     # ── Show student ──────────────────────────────────────────────────────────
     def show_student(idx):
@@ -1368,7 +1549,7 @@ def opt_student_profile():
         _set_btn_alpha(next_btn, active=(idx < total - 1))
 
     def _set_btn_alpha(btn_canvas, active):
-        color = OPTION_COLORS[7] if active else "#374151"
+        color = OPTION_COLORS[7] if active else SECONDARY
         btn_canvas.delete("all")
         w = int(btn_canvas.cget("width"))
         h = int(btn_canvas.cget("height"))
@@ -1425,7 +1606,7 @@ def opt_student_id_card():
         seed = int(hashlib.md5(name.encode()).hexdigest(), 16)
         SKIN  = ["#FDBCB4","#F1C27D","#E0AC69","#C68642","#8D5524"]
         HAIR  = ["#1a1a1a","#4a3728","#8B4513","#DAA520","#C0392B","#2C1810","#6C3483"]
-        SHIRT = ["#7c3aed","#0d7377","#1d4ed8","#be185d","#065f46","#b45309","#0e7490"]
+        SHIRT = [ACCENT, TEAL, "#1d4ed8", GREEN, SECONDARY]
         IRIS  = ["#3b4a6b","#1a7a4a","#7a4a1a","#1a4a7a","#555555"]
         skin   = SKIN [(seed)       % len(SKIN)]
         hair   = HAIR [(seed >>  8) % len(HAIR)]
@@ -1641,7 +1822,7 @@ def opt_student_id_card():
                         bordercolor="#121212", focuscolor="#121212",
                         padding=(22, 11), relief="flat")
     nav_style.map("Nav.TButton",
-                  background=[("disabled", "#374151"),
+                  background=[("disabled", SECONDARY),
                               ("active", "#2a2a2a")],
                   foreground=[("disabled", "#8a8a8a"),
                               ("active", "white")])
@@ -1661,7 +1842,7 @@ def opt_student_id_card():
     next_btn.pack(side="left", padx=12)
 
     make_button(inner_nav, "Close", top.destroy,
-                color="#374151", width=140, height=48, radius=24).pack(
+                color=SECONDARY, width=140, height=48, radius=24).pack(
                     side="left", padx=20)
 
     # ── show_card: just repopulate the fixed frame ────────────────────────────
