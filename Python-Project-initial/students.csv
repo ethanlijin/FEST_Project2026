@@ -1,0 +1,151 @@
+student_id,name,major,course_code,course_title,points,gpa
+100,Gregory Gonzalez,Computer Science,BUS 1100,Introduction to Business,71,1.1
+100,Gregory Gonzalez,Computer Science,CSDS 1100,Python Programming,89.0,3.3
+100,Gregory Gonzalez,Computer Science,EE 1100,Circuit Analysis,90.0,3.7
+100,Gregory Gonzalez,Computer Science,ME 1000,Basic Mechanical Engineering,99,3.7
+101,Charles Castillo,Computer Science,BUS 1100,Introduction to Business,94,3.3
+101,Charles Castillo,Computer Science,CSDS 1100,Python Programming,98,3.9
+101,Charles Castillo,Computer Science,EE 1100,Circuit Analysis,99.0,4.0
+101,Charles Castillo,Computer Science,MATH 1300,Calculus I,59,0.2
+102,Larry Martinez,Business Administration,BUS 1100,Introduction to Business,82,1.9
+103,Richard Sanchez,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,87,2.8
+104,Justin White,Business Administration,BUS 1100,Introduction to Business,81,1.9
+105,Brandon King,Computer Science,CSDS 1100,Python Programming,65,0.6
+106,George King,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,68,1.1
+107,George Lopez,Computer Science,CSDS 1100,Python Programming,79,1.7
+108,Sharon Ramos,Electrical Engineering,EE 1100,Circuit Analysis,57,0.1
+109,Helen Wilson,Mathematics,MATH 1300,Calculus I,60,0.0
+110,Catherine Cox,Electrical Engineering,EE 1100,Circuit Analysis,91,2.9
+111,Jennifer Brown,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,73,1.6
+112,Steven Hernandez,Mathematics,MATH 1300,Calculus I,72,1.2
+113,Laura Jackson,Electrical Engineering,EE 1100,Circuit Analysis,77,1.5
+114,Amanda Mendoza,Computer Science,CSDS 1100,Python Programming,93,3.4
+115,Helen Alvarez,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,65,0.5
+116,Amanda Richardson,Business Administration,BUS 1100,Introduction to Business,69,1.0
+117,Kelly Ross,Computer Science,CSDS 1100,Python Programming,69,1.1
+118,Stephanie Roberts,Electrical Engineering,EE 1100,Circuit Analysis,59,0.0
+119,Katherine Hughes,Electrical Engineering,EE 1100,Circuit Analysis,68,0.9
+120,Kathleen Watson,Mathematics,MATH 1300,Calculus I,64,0.3
+121,Paul Sanders,Business Administration,BUS 1100,Introduction to Business,89,2.8
+121,Paul Sanders,Business Administration,CSDS 1100,Python Programming,63,0.4
+121,Paul Sanders,Business Administration,MATH 1300,Calculus I,94,3.4
+121,Paul Sanders,Business Administration,ME 1000,Basic Mechanical Engineering,81,2.1
+122,Christine Evans,Business Administration,BUS 1100,Introduction to Business,80,1.9
+122,Christine Evans,Business Administration,CSDS 1100,Python Programming,85,2.3
+122,Christine Evans,Business Administration,MATH 1300,Calculus I,84,2.4
+122,Christine Evans,Business Administration,ME 1000,Basic Mechanical Engineering,86,2.9
+123,Charles Murphy,Mathematics,MATH 1300,Calculus I,60,0.2
+124,Nancy Moore,Mechanical Engineering,BUS 1100,Introduction to Business,80,2.1
+124,Nancy Moore,Mechanical Engineering,CSDS 1100,Python Programming,67,0.9
+124,Nancy Moore,Mechanical Engineering,EE 1100,Circuit Analysis,94,3.6
+124,Nancy Moore,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,98,3.8
+125,Jennifer Mitchell,Mathematics,BUS 1100,Introduction to Business,77,1.4
+125,Jennifer Mitchell,Mathematics,CSDS 1100,Python Programming,91,3.4
+125,Jennifer Mitchell,Mathematics,EE 1100,Circuit Analysis,79,2.1
+125,Jennifer Mitchell,Mathematics,MATH 1300,Calculus I,93,3.6
+125,Jennifer Mitchell,Mathematics,ME 1000,Basic Mechanical Engineering,83,2.2
+126,Stephen Walker,Business Administration,BUS 1100,Introduction to Business,55,0.1
+127,Nancy Bennett,Business Administration,BUS 1100,Introduction to Business,72,1.4
+128,George Gonzalez,Electrical Engineering,EE 1100,Circuit Analysis,82,2.0
+129,Dan Price,Electrical Engineering,EE 1100,Circuit Analysis,87,2.9
+130,Emma Lopez,Electrical Engineering,EE 1100,Circuit Analysis,95,3.5
+131,Mark Moore,Electrical Engineering,EE 1100,Circuit Analysis,65,0.5
+132,Aaron Rogers,Computer Science,CSDS 1100,Python Programming,93,3.2
+133,Maria Gonzalez,Electrical Engineering,BUS 1100,Introduction to Business,99,3.8
+133,Maria Gonzalez,Electrical Engineering,CSDS 1100,Python Programming,59,0.2
+133,Maria Gonzalez,Electrical Engineering,EE 1100,Circuit Analysis,74,1.2
+133,Maria Gonzalez,Electrical Engineering,MATH 1300,Calculus I,97,3.4
+133,Maria Gonzalez,Electrical Engineering,ME 1000,Basic Mechanical Engineering,72,1.2
+134,Carol Peterson,Computer Science,CSDS 1100,Python Programming,60,0.1
+135,Jennifer Myers,Business Administration,BUS 1100,Introduction to Business,63,0.1
+136,Brenda Morgan,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,71,1.1
+137,Benjamin Evans,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,89,3.1
+138,Heather White,Electrical Engineering,EE 1100,Circuit Analysis,80,2.3
+139,Alexander Rivera,Mathematics,MATH 1300,Calculus I,88,2.8
+140,Paul Clark,Computer Science,CSDS 1100,Python Programming,76,1.3
+141,Samantha Ramirez,Business Administration,BUS 1100,Introduction to Business,69,0.6
+142,Diane Ward,Computer Science,CSDS 1100,Python Programming,69,0.6
+143,Linda Green,Computer Science,CSDS 1100,Python Programming,87,2.5
+144,Frank Stewart,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,89,2.7
+145,Scott Bailey,Mathematics,MATH 1300,Calculus I,70,1.2
+146,Amy Thompson,Computer Science,CSDS 1100,Python Programming,61,0.2
+147,Edward Evans,Mathematics,MATH 1300,Calculus I,84,2.6
+148,Patricia James,Computer Science,CSDS 1100,Python Programming,58,0.0
+149,George Lopez,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,67,0.5
+150,Jacob Thomas,Mathematics,MATH 1300,Calculus I,66,0.5
+151,Paul Davis,Mathematics,MATH 1300,Calculus I,90,2.8
+152,Alexander Ortiz,Computer Science,CSDS 1100,Python Programming,60,0.3
+153,Carol Martin,Mathematics,MATH 1300,Calculus I,86,2.6
+154,Jason Garcia,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,79,1.6
+155,Timothy Young,Mathematics,MATH 1300,Calculus I,73,1.3
+156,Dennis Cooper,Mathematics,MATH 1300,Calculus I,64,0.2
+157,Donald Garcia,Business Administration,BUS 1100,Introduction to Business,89,2.6
+158,Stephanie Garcia,Computer Science,CSDS 1100,Python Programming,92,3.2
+159,Stephen Jackson,Computer Science,CSDS 1100,Python Programming,87,2.4
+160,Anthony Miller,Business Administration,BUS 1100,Introduction to Business,59,0.1
+161,Carol Roberts,Computer Science,BUS 1100,Introduction to Business,74,1.7
+161,Carol Roberts,Computer Science,CSDS 1100,Python Programming,91,2.9
+161,Carol Roberts,Computer Science,EE 1100,Circuit Analysis,56,0.2
+161,Carol Roberts,Computer Science,MATH 1300,Calculus I,64,0.5
+162,Debra Brown,Business Administration,BUS 1100,Introduction to Business,60,0.0
+163,Christine Peterson,Business Administration,BUS 1100,Introduction to Business,75,1.8
+164,Kimberly Wood,Electrical Engineering,EE 1100,Circuit Analysis,70,0.9
+165,Lisa Wood,Electrical Engineering,EE 1100,Circuit Analysis,84,2.3
+166,Victoria Davis,Computer Science,CSDS 1100,Python Programming,84,2.5
+167,Katherine Hernandez,Computer Science,CSDS 1100,Python Programming,89,2.7
+168,Andrew Anderson,Electrical Engineering,EE 1100,Circuit Analysis,59,0.2
+169,Ronald Wright,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,83,2.5
+170,Diane Torres,Business Administration,BUS 1100,Introduction to Business,96,3.6
+171,Frank Morgan,Electrical Engineering,EE 1100,Circuit Analysis,97,3.5
+172,Charles Young,Computer Science,CSDS 1100,Python Programming,61,0.2
+173,Daniel Allen,Electrical Engineering,BUS 1100,Introduction to Business,88,2.7
+173,Daniel Allen,Electrical Engineering,EE 1100,Circuit Analysis,93,3.1
+173,Daniel Allen,Electrical Engineering,MATH 1300,Calculus I,69,0.9
+173,Daniel Allen,Electrical Engineering,ME 1000,Basic Mechanical Engineering,65,0.4
+174,George Harris,Electrical Engineering,EE 1100,Circuit Analysis,87,2.7
+175,Patricia Martinez,Mathematics,MATH 1300,Calculus I,72,0.9
+176,Rebecca Long,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,95,3.8
+177,Sandra Castillo,Mathematics,MATH 1300,Calculus I,90,3.1
+178,Justin Tairas,Computer Science,BUS 1100,Introduction to Business,79,2.2
+178,Justin Tairas,Computer Science,CSDS 1100,Python Programming,59,0.3
+178,Justin Tairas,Computer Science,EE 1100,Circuit Analysis,72,1.3
+178,Justin Tairas,Computer Science,MATH 1300,Calculus I,77,1.8
+178,Justin Tairas,Computer Science,ME 1000,Basic Mechanical Engineering,82,2.4
+179,Heather Moore,Business Administration,BUS 1100,Introduction to Business,57,0.2
+180,Christine Morgan,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,82,2.0
+181,Kevin Hall,Computer Science,BUS 1100,Introduction to Business,64,0.2
+181,Kevin Hall,Computer Science,CSDS 1100,Python Programming,77,1.5
+181,Kevin Hall,Computer Science,MATH 1300,Calculus I,69,0.6
+181,Kevin Hall,Computer Science,ME 1000,Basic Mechanical Engineering,92,3.0
+182,Paul Wood,Computer Science,BUS 1100,Introduction to Business,55,0.0
+182,Paul Wood,Computer Science,CSDS 1100,Python Programming,77,1.9
+182,Paul Wood,Computer Science,EE 1100,Circuit Analysis,93,3.0
+182,Paul Wood,Computer Science,MATH 1300,Calculus I,65,0.3
+183,Amy Cox,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,70,1.2
+184,Ashley Gomez,Computer Science,BUS 1100,Introduction to Business,72,1.4
+184,Ashley Gomez,Computer Science,CSDS 1100,Python Programming,66,0.7
+184,Ashley Gomez,Computer Science,EE 1100,Circuit Analysis,86,2.3
+184,Ashley Gomez,Computer Science,MATH 1300,Calculus I,83,2.2
+184,Ashley Gomez,Computer Science,ME 1000,Basic Mechanical Engineering,70,0.9
+185,Rebecca Gomez,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,72,1.0
+186,Patrick Lopez,Mathematics,MATH 1300,Calculus I,57,0.2
+187,Donna White,Mathematics,MATH 1300,Calculus I,77,1.6
+188,Steven Clark,Computer Science,CSDS 1100,Python Programming,97,3.5
+189,Rebecca King,Computer Science,CSDS 1100,Python Programming,72,1.1
+190,Jonathan Roberts,Business Administration,BUS 1100,Introduction to Business,76,1.9
+191,Nancy Young,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,92,3.5
+192,Andrew Williams,Computer Science,CSDS 1100,Python Programming,93,3.3
+193,Dennis Hill,Mathematics,BUS 1100,Introduction to Business,80,1.9
+193,Dennis Hill,Mathematics,EE 1100,Circuit Analysis,61,0.1
+193,Dennis Hill,Mathematics,MATH 1300,Calculus I,93,3.6
+193,Dennis Hill,Mathematics,ME 1000,Basic Mechanical Engineering,80,1.7
+194,Nancy Mitchell,Business Administration,BUS 1100,Introduction to Business,67,0.6
+195,Diane Turner,Computer Science,CSDS 1100,Python Programming,88,3.1
+196,Helen Bennett,Mechanical Engineering,ME 1000,Basic Mechanical Engineering,78,1.8
+197,Frank Green,Business Administration,BUS 1100,Introduction to Business,75,1.6
+198,Thomas Price,Electrical Engineering,EE 1100,Circuit Analysis,87,2.6
+199,Amy Flores,Mathematics,BUS 1100,Introduction to Business,73,1.1
+199,Amy Flores,Mathematics,CSDS 1100,Python Programming,84,2.3
+199,Amy Flores,Mathematics,EE 1100,Circuit Analysis,58,0.0
+199,Amy Flores,Mathematics,MATH 1300,Calculus I,99,3.8
+199,Amy Flores,Mathematics,ME 1000,Basic Mechanical Engineering,94,3.2
