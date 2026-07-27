@@ -1,6 +1,7 @@
 # FEST Summer 2026 — Student Management System
 
 Desktop Tkinter app for managing student enrollment records, grades, charts, and ID cards.
+The interface uses Vanderbilt's official black, flat-gold, cream, sand, gray, sky, oak, and sage palette.
 
 ## Setup
 
@@ -20,7 +21,7 @@ python main.py
 ```
 
 Register an account on first launch, then log in to access the sidebar dashboard.
-The sidebar provides student-management, GPA, chart, profile, ID-card, and query tools.
+The sidebar provides student-management, class-ranking, GPA, chart, profile, ID-card, and query tools.
 The most recent record deletion can be restored with **Undo Delete** during the current app session.
 
 ## Data files

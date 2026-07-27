@@ -20,31 +20,43 @@ GPA_SCALE_FILE = os.path.join(BASE_DIR, "gpa_scale.json")
 STUDENT_FIELDS = ["student_id", "name", "major", "course_code", "course_title", "points", "gpa"]
 
 # ── Color palette ─────────────────────────────────────────────────────────────
-BG        = "#0f172a"
-PANEL     = "#111827"
-CARD      = "#1e293b"
-ACCENT    = "#3b82f6"
-CYAN      = "#60a5fa"
-TEAL      = "#2563eb"
-TEXT      = "#f8fafc"
-MUTED     = "#94a3b8"
-GREEN     = "#22c55e"
-RED       = "#ef4444"
-BORDER    = "#334155"
-SECONDARY = "#374151"
-SIDEBAR_BUTTON_BG = "#f8fafc"
-SIDEBAR_BUTTON_HOVER = "#e2e8f0"
-SIDEBAR_BUTTON_TEXT = "#111827"
+VANDY_GOLD       = "#CFAE70"
+VANDY_BLACK      = "#1C1C1C"
+VANDY_WHITE      = "#FFFFFF"
+VANDY_DARK_GRAY  = "#777777"
+VANDY_LIGHT_GRAY = "#E4E4E4"
+VANDY_SAND       = "#E0D5C0"
+VANDY_CREAM      = "#F5F3EF"
+VANDY_SKY        = "#B3C9CD"
+VANDY_HIGHLIGHT  = "#ECB748"
+VANDY_OAK        = "#946E24"
+VANDY_SAGE       = "#8BA18E"
+
+BG        = VANDY_BLACK
+PANEL     = "#000000"
+CARD      = "#2A2A2A"
+ACCENT    = VANDY_GOLD
+CYAN      = "#FEEEB6"
+TEAL      = VANDY_OAK
+TEXT      = VANDY_WHITE
+MUTED     = VANDY_SAND
+GREEN     = VANDY_SAGE
+RED       = "#C84B31"
+BORDER    = VANDY_DARK_GRAY
+SECONDARY = "#3A3A3A"
+SIDEBAR_BUTTON_BG = VANDY_CREAM
+SIDEBAR_BUTTON_HOVER = VANDY_SAND
+SIDEBAR_BUTTON_TEXT = VANDY_BLACK
 
 OPTION_COLORS = [
     ACCENT, ACCENT, RED, ACCENT, ACCENT,
-    ACCENT, ACCENT, ACCENT, ACCENT, ACCENT,
+    ACCENT, ACCENT, ACCENT, ACCENT, ACCENT, ACCENT,
 ]
 OPTION_LABELS = [
     "Add Student", "Edit Student", "Delete Record",
     "GPA Formula", "Swarm Plot",  "Major Count Plot",
     "Grade Pie Chart", "Student Profile", "Student ID Card",
-    "Queries",
+    "Queries", "Class Rank",
 ]
 
 # ── GPA grading scale ─────────────────────────────────────────────────────────
@@ -58,11 +70,11 @@ DEFAULT_GPA_SCALE = [
 GPA_SCALE = list(DEFAULT_GPA_SCALE)
 
 GRADE_PALETTE = {
-    "A (90-100)": "#10b981",
-    "B (80-89)":  "#3b82f6",
-    "C (70-79)":  "#f59e0b",
-    "D (60-69)":  "#f97316",
-    "F (0-59)":   "#ef4444",
+    "A (90-100)": VANDY_SAGE,
+    "B (80-89)":  VANDY_SKY,
+    "C (70-79)":  VANDY_GOLD,
+    "D (60-69)":  VANDY_HIGHLIGHT,
+    "F (0-59)":   RED,
 }
 
 # ── App-level state ───────────────────────────────────────────────────────────
@@ -92,6 +104,59 @@ def grade_category(p):
     if p >= 70: return "C (70-79)"
     if p >= 60: return "D (60-69)"
     return "F (0-59)"
+
+
+def calculate_class_rankings(records):
+    students = {}
+    for record in records:
+        student_id = record.get("student_id", "").strip()
+        if not student_id:
+            continue
+        try:
+            points = float(record["points"])
+            _, gpa = points_to_grade(points)
+        except (KeyError, TypeError, ValueError):
+            continue
+
+        student = students.setdefault(student_id, {
+            "student_id": student_id,
+            "name": record.get("name", "").strip() or "Unknown",
+            "major": record.get("major", "").strip() or "Undeclared",
+            "points": [],
+            "gpas": [],
+        })
+        student["points"].append(points)
+        student["gpas"].append(gpa)
+
+    rankings = []
+    for student in students.values():
+        average_gpa = sum(student["gpas"]) / len(student["gpas"])
+        average_points = sum(student["points"]) / len(student["points"])
+        rankings.append({
+            "student_id": student["student_id"],
+            "name": student["name"],
+            "major": student["major"],
+            "courses": len(student["gpas"]),
+            "average_points": average_points,
+            "average_gpa": average_gpa,
+            "rank_gpa": round(average_gpa, 2),
+        })
+
+    rankings.sort(key=lambda student: (
+        -student["rank_gpa"],
+        -student["average_points"],
+        student["name"].lower(),
+        student["student_id"],
+    ))
+
+    previous_gpa = None
+    current_rank = 0
+    for position, student in enumerate(rankings, start=1):
+        if previous_gpa is None or student["rank_gpa"] != previous_gpa:
+            current_rank = position
+            previous_gpa = student["rank_gpa"]
+        student["rank"] = current_rank
+    return rankings
 
 
 # =============================================================================
@@ -216,9 +281,15 @@ def make_entry(parent, show="", width=32):
     return wrap, e
 
 
-def make_button(parent, text, cmd, color=None, width=260, height=54, radius=26, fg="white"):
+def make_button(parent, text, cmd, color=None, width=260, height=54, radius=26, fg=None):
     """Canvas-based rounded-corner button."""
     color = color or ACCENT
+    if fg is None:
+        light_backgrounds = {
+            VANDY_GOLD, VANDY_SAND, VANDY_CREAM, VANDY_SKY,
+            VANDY_SAGE, VANDY_HIGHLIGHT, CYAN, GREEN,
+        }
+        fg = VANDY_BLACK if color in light_backgrounds else VANDY_WHITE
     try:
         bg = parent.cget("bg")
     except Exception:
@@ -284,7 +355,7 @@ def make_sidebar_button(parent, text, cmd, danger=False):
         parent, text=text, command=cmd,
         font=("Segoe UI", 11, "bold"), fg=color, bg=SIDEBAR_BUTTON_BG,
         activeforeground=color, activebackground=SIDEBAR_BUTTON_HOVER,
-        relief="flat", bd=0, anchor="w", padx=18, pady=9,
+        relief="flat", bd=0, anchor="w", padx=18, pady=7,
         cursor="hand2",
     )
 
@@ -319,7 +390,7 @@ def style_treeview():
                 font=("Segoe UI", 10, "bold"))
     s.map("D.Treeview",
           background=[("selected", ACCENT)],
-          foreground=[("selected", "white")])
+          foreground=[("selected", VANDY_BLACK)])
 
 
 def make_form_row(parent, label, row, show="", initial=""):
@@ -593,6 +664,7 @@ def show_menu():
         anchor="w", padx=18, pady=(14, 2))
     for label, option in [
         ("ƒ  GPA scale", 3),
+        ("★  Class rankings", 10),
         ("•  Score distribution", 4),
         ("▥  Major enrollment", 5),
         ("◕  Grade distribution", 6),
@@ -607,7 +679,7 @@ def show_menu():
         font=("Segoe UI", 10, "bold"), fg=SIDEBAR_BUTTON_TEXT,
         bg=SIDEBAR_BUTTON_BG, activeforeground=SIDEBAR_BUTTON_TEXT,
         activebackground=SIDEBAR_BUTTON_HOVER,
-        disabledforeground="#64748b", relief="flat", bd=0,
+        disabledforeground=VANDY_DARK_GRAY, relief="flat", bd=0,
         anchor="w", padx=16, pady=9, cursor="hand2",
     )
     undo_delete_button.pack(fill="x", side="bottom", padx=12, pady=(0, 8))
@@ -697,6 +769,7 @@ def handle_option(n):
         7: opt_student_profile,
         8: opt_student_id_card,
         9: opt_queries,
+        10: opt_class_rank,
     }
     dispatch.get(n, lambda: None)()
 
@@ -1110,11 +1183,11 @@ def opt_swarm_plot():
     ax.set_facecolor(CARD)
     for spine in ax.spines.values():
         spine.set_color(BORDER)
-    ax.tick_params(colors="#94a3b8")
+    ax.tick_params(colors=MUTED)
     ax.set_title("Student Score Distribution (Swarm Plot)",
-                 color="#f1f5f9", fontsize=13, fontweight="bold", pad=12)
-    ax.set_xlabel("Course Code", color="#94a3b8", fontsize=11, labelpad=8)
-    ax.set_ylabel("Points (out of 100)", color="#94a3b8", fontsize=11)
+                 color=TEXT, fontsize=13, fontweight="bold", pad=12)
+    ax.set_xlabel("Course Code", color=MUTED, fontsize=11, labelpad=8)
+    ax.set_ylabel("Points (out of 100)", color=MUTED, fontsize=11)
     ax.set_ylim(-5, 108)
 
     if HAS_SEABORN:
@@ -1128,9 +1201,9 @@ def opt_swarm_plot():
             leg.get_frame().set_facecolor(PANEL)
             leg.get_frame().set_edgecolor(BORDER)
             leg.set_title("Grade", prop={"size": 9})
-            leg.get_title().set_color("#94a3b8")
+            leg.get_title().set_color(MUTED)
             for t in leg.get_texts():
-                t.set_color("#f1f5f9")
+                t.set_color(TEXT)
     else:
         unique = sorted(set(codes))
         x_map  = {c: i for i, c in enumerate(unique)}
@@ -1140,15 +1213,19 @@ def opt_swarm_plot():
         ax.scatter(xs, pts, c=colors, s=90, alpha=0.9,
                    edgecolors=BG, linewidths=0.5)
         ax.set_xticks(range(len(unique)))
-        ax.set_xticklabels(unique, color="#94a3b8")
+        ax.set_xticklabels(unique, color=MUTED)
         from matplotlib.patches import Patch
         handles = [Patch(facecolor=c, label=l) for l, c in GRADE_PALETTE.items()]
         leg = ax.legend(handles=handles, facecolor=PANEL, edgecolor=BORDER)
         for t in leg.get_texts():
-            t.set_color("#f1f5f9")
+            t.set_color(TEXT)
 
-    for threshold, color in [(90, "#10b981"), (80, "#3b82f6"),
-                              (70, "#f59e0b"), (60, "#f97316")]:
+    for threshold, color in [
+        (90, GRADE_PALETTE["A (90-100)"]),
+        (80, GRADE_PALETTE["B (80-89)"]),
+        (70, GRADE_PALETTE["C (70-79)"]),
+        (60, GRADE_PALETTE["D (60-69)"]),
+    ]:
         ax.axhline(threshold, color=color, linewidth=0.7, linestyle="--", alpha=0.45)
 
     plt.tight_layout(pad=1.5)
@@ -1194,38 +1271,38 @@ def opt_countplot():
 
     majors = list(major_counts.keys())
     counts = [major_counts[m] for m in majors]
+    bar_colors = [ACCENT, VANDY_SKY, VANDY_OAK, VANDY_SAGE, VANDY_HIGHLIGHT]
 
     fig, ax = plt.subplots(figsize=(9.2, 5.4))
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(CARD)
     for spine in ax.spines.values():
         spine.set_color(BORDER)
-    ax.tick_params(colors="#94a3b8")
+    ax.tick_params(colors=MUTED)
     ax.set_title("Number of Students per Major",
-                 color="#f1f5f9", fontsize=13, fontweight="bold", pad=12)
-    ax.set_xlabel("Major", color="#94a3b8", fontsize=11, labelpad=8)
-    ax.set_ylabel("Number of Students", color="#94a3b8", fontsize=11)
+                 color=TEXT, fontsize=13, fontweight="bold", pad=12)
+    ax.set_xlabel("Major", color=MUTED, fontsize=11, labelpad=8)
+    ax.set_ylabel("Number of Students", color=MUTED, fontsize=11)
 
     if HAS_SEABORN:
         df = pd.DataFrame({"Major": majors, "Count": counts})
         df = df.sort_values("Count", ascending=False)
-        sns.barplot(data=df, x="Major", y="Count", palette="viridis",
+        sns.barplot(data=df, x="Major", y="Count", palette=bar_colors,
                     ax=ax, edgecolor=BG, linewidth=0.8)
         for bar, count in zip(ax.patches, df["Count"]):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05,
                     str(count), ha="center", va="bottom",
-                    color="#f1f5f9", fontsize=11, fontweight="bold")
+                    color=TEXT, fontsize=11, fontweight="bold")
     else:
-        bar_colors = [ACCENT, CYAN, TEAL, GREEN, "#f59e0b"]
         bars = ax.bar(majors, counts,
                       color=[bar_colors[i % len(bar_colors)] for i in range(len(majors))],
                       edgecolor=BG, linewidth=0.8)
         for bar, count in zip(bars, counts):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05,
                     str(count), ha="center", va="bottom",
-                    color="#f1f5f9", fontsize=11, fontweight="bold")
+                    color=TEXT, fontsize=11, fontweight="bold")
         ax.set_xticks(range(len(majors)))
-        ax.set_xticklabels(majors, color="#94a3b8")
+        ax.set_xticklabels(majors, color=MUTED)
 
     ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
     ax.set_ylim(0, max(counts) + 1.5)
@@ -1281,11 +1358,11 @@ def opt_piechart():
     labels  = [f"Grade {k}" for k in ordered_keys]
     sizes   = [grade_counts[k] for k in ordered_keys]
     colors  = {
-        "A": "#10b981",   # green
-        "B": "#3b82f6",   # blue
-        "C": "#f59e0b",   # amber
-        "D": "#f97316",   # orange
-        "F": "#ef4444",   # red
+        "A": VANDY_SAGE,
+        "B": VANDY_SKY,
+        "C": VANDY_GOLD,
+        "D": VANDY_HIGHLIGHT,
+        "F": RED,
     }
     pie_colors  = [colors[k] for k in ordered_keys]
     # Only pull out the single largest slice, keep the rest flush.
@@ -1337,7 +1414,7 @@ def opt_piechart():
 
     # Style percentage text
     for at in autotexts:
-        at.set_color("#f1f5f9")
+        at.set_color(VANDY_BLACK)
         at.set_fontweight("bold")
         at.set_fontsize(10)
 
@@ -1353,10 +1430,10 @@ def opt_piechart():
                     edgecolor=BORDER,
                     fontsize=11)
     for text in leg.get_texts():
-        text.set_color("#f1f5f9")
+        text.set_color(TEXT)
 
     ax.set_title(f"Letter Grade Distribution  (n = {sum(sizes)} students)",
-                 color="#f1f5f9", fontsize=13, fontweight="bold", pad=18)
+                 color=TEXT, fontsize=13, fontweight="bold", pad=18)
 
     plt.tight_layout()
 
@@ -1458,7 +1535,7 @@ def opt_student_profile():
 
     info_row("ID", id_var,    CYAN)
     info_row("👤", name_var,  TEXT)
-    info_row("📚", major_var, "#a78bfa")
+    info_row("📚", major_var, ACCENT)
 
     # ── Course table ──────────────────────────────────────────────────────────
     tbl_hdr = tk.Frame(top, bg=BG)
@@ -1595,8 +1672,8 @@ def opt_student_id_card():
     total       = len(student_ids)
     current     = [0]
 
-    VU_GOLD  = "#CFAE70"
-    VU_BLACK = "#121212"
+    VU_GOLD  = VANDY_GOLD
+    VU_BLACK = VANDY_BLACK
     CARD_W   = 520
     CARD_H   = 295
 
@@ -1606,7 +1683,7 @@ def opt_student_id_card():
         seed = int(hashlib.md5(name.encode()).hexdigest(), 16)
         SKIN  = ["#FDBCB4","#F1C27D","#E0AC69","#C68642","#8D5524"]
         HAIR  = ["#1a1a1a","#4a3728","#8B4513","#DAA520","#C0392B","#2C1810","#6C3483"]
-        SHIRT = [ACCENT, TEAL, "#1d4ed8", GREEN, SECONDARY]
+        SHIRT = [VANDY_GOLD, VANDY_OAK, VANDY_SKY, VANDY_SAGE, VANDY_DARK_GRAY]
         IRIS  = ["#3b4a6b","#1a7a4a","#7a4a1a","#1a4a7a","#555555"]
         skin   = SKIN [(seed)       % len(SKIN)]
         hair   = HAIR [(seed >>  8) % len(HAIR)]
@@ -1618,7 +1695,7 @@ def opt_student_id_card():
         cv = tk.Canvas(parent, width=size, height=size,
                        bg=VU_BLACK, highlightthickness=0)
         cx = size // 2
-        cv.create_oval(2, 2, size-2, size-2, fill="#1a2233", outline=VU_GOLD, width=2)
+        cv.create_oval(2, 2, size-2, size-2, fill=VANDY_BLACK, outline=VU_GOLD, width=2)
         by_ = int(size*.70)
         cv.create_arc(int(size*.04), by_-int(size*.32), int(size*.96), size+int(size*.14),
                       start=0, extent=180, fill=shirt, outline="")
@@ -1712,7 +1789,7 @@ def opt_student_id_card():
         tk.Label(hi, text="VANDERBILT UNIVERSITY",
                  font=("Georgia", 13, "bold"), fg=VU_BLACK, bg=VU_GOLD).pack(anchor="w")
         tk.Label(hi, text="Student Identification Card",
-                 font=("Segoe UI", 8), fg="#4a3800", bg=VU_GOLD).pack(anchor="w")
+                 font=("Segoe UI", 8), fg=VANDY_BLACK, bg=VU_GOLD).pack(anchor="w")
         tk.Label(hdr, text="2026",
                  font=("Segoe UI", 10, "bold"), fg=VU_BLACK, bg=VU_GOLD).pack(
                      side="right", padx=12)
@@ -1740,14 +1817,14 @@ def opt_student_id_card():
         tk.Label(right, text=first["major"],
                  font=("Segoe UI", 11), fg=VU_GOLD, bg=VU_BLACK).pack(anchor="w", pady=(3, 0))
         tk.Label(right, text="Vanderbilt University  ·  Nashville, TN",
-                 font=("Segoe UI", 8), fg="#666666", bg=VU_BLACK).pack(anchor="w", pady=(2, 6))
+                 font=("Segoe UI", 8), fg=VANDY_DARK_GRAY, bg=VU_BLACK).pack(anchor="w", pady=(2, 6))
         tk.Frame(right, bg=VU_GOLD, height=1).pack(fill="x", pady=(0, 6))
         tk.Label(right, text="STUDENT ID",
-                 font=("Segoe UI", 7, "bold"), fg="#777777", bg=VU_BLACK).pack(anchor="w")
+                 font=("Segoe UI", 7, "bold"), fg=VANDY_DARK_GRAY, bg=VU_BLACK).pack(anchor="w")
         tk.Label(right, text=first["student_id"],
                  font=("Courier New", 15, "bold"), fg=VU_GOLD, bg=VU_BLACK).pack(anchor="w")
         tk.Label(right, text=f"Enrolled courses: {len(recs)}",
-                 font=("Segoe UI", 8), fg="#666666", bg=VU_BLACK).pack(anchor="w", pady=(6, 0))
+                 font=("Segoe UI", 8), fg=VANDY_DARK_GRAY, bg=VU_BLACK).pack(anchor="w", pady=(6, 0))
 
         # barcode footer
         make_barcode(card_body, first["student_id"]).pack(fill="x")
@@ -1818,14 +1895,14 @@ def opt_student_id_card():
     nav_style.theme_use("clam")
     nav_style.configure("Nav.TButton",
                         font=("Segoe UI", 12, "bold"),
-                        background="#121212", foreground="white",
-                        bordercolor="#121212", focuscolor="#121212",
+                        background=VANDY_BLACK, foreground=VANDY_WHITE,
+                        bordercolor=VANDY_BLACK, focuscolor=VANDY_BLACK,
                         padding=(22, 11), relief="flat")
     nav_style.map("Nav.TButton",
                   background=[("disabled", SECONDARY),
-                              ("active", "#2a2a2a")],
-                  foreground=[("disabled", "#8a8a8a"),
-                              ("active", "white")])
+                              ("active", CARD)],
+                  foreground=[("disabled", VANDY_DARK_GRAY),
+                              ("active", VANDY_WHITE)])
 
     prev_btn = ttk.Button(inner_nav, text="◀  Previous", style="Nav.TButton",
                           cursor="hand2",
@@ -1854,6 +1931,141 @@ def opt_student_id_card():
         next_btn.config(state="normal" if i < total-1 else "disabled")
 
     show_card(0)   # first student shown by default
+
+
+# =============================================================================
+#  Option 10: Class Rank
+# =============================================================================
+
+def opt_class_rank():
+    rankings = calculate_class_rankings(load_students())
+    if not rankings:
+        messagebox.showwarning(
+            "No Ranking Data",
+            "No student records with valid scores were found.",
+            parent=root,
+        )
+        return
+
+    top = make_popup("Class Rankings", w=940, h=700, resizable=True)
+    tk.Frame(top, bg=OPTION_COLORS[10], height=5).pack(fill="x")
+
+    header = tk.Frame(top, bg=PANEL)
+    header.pack(fill="x")
+    make_label(header, "Class Rankings", 18, bold=True).pack(
+        anchor="w", padx=22, pady=(14, 2))
+    make_label(
+        header,
+        "Ranked by average GPA across each student's courses. "
+        "Students with the same GPA share a rank.",
+        10, color=MUTED,
+    ).pack(anchor="w", padx=22, pady=(0, 14))
+
+    podium = tk.Frame(top, bg=BG)
+    podium.pack(fill="x", padx=16, pady=(14, 8))
+    for column in range(3):
+        podium.columnconfigure(column, weight=1)
+
+    medal_colors = [VANDY_GOLD, VANDY_LIGHT_GRAY, VANDY_OAK]
+    medal_labels = ["1st", "2nd", "3rd"]
+    for column, student in enumerate(rankings[:3]):
+        card = tk.Frame(
+            podium, bg=CARD, highlightbackground=medal_colors[column],
+            highlightthickness=2,
+        )
+        card.grid(row=0, column=column, sticky="nsew", padx=6)
+        make_label(card, medal_labels[column], 11, bold=True,
+                   color=medal_colors[column]).pack(
+                       anchor="w", padx=14, pady=(12, 2))
+        make_label(card, student["name"], 13, bold=True).pack(
+            anchor="w", padx=14)
+        make_label(
+            card,
+            f"{student['average_gpa']:.2f} GPA  ·  "
+            f"{student['average_points']:.1f} avg points",
+            9, color=MUTED,
+        ).pack(anchor="w", padx=14, pady=(3, 12))
+
+    search_row = tk.Frame(top, bg=BG)
+    search_row.pack(fill="x", padx=22, pady=(8, 6))
+    make_label(search_row, "Search:", 10, color=MUTED).pack(
+        side="left", padx=(0, 8))
+    search_wrap = tk.Frame(search_row, bg=CYAN, padx=1, pady=1)
+    search_wrap.pack(side="left")
+    search_var = tk.StringVar()
+    search_entry = tk.Entry(
+        search_wrap, textvariable=search_var, width=30,
+        font=("Segoe UI", 11), bg=CARD, fg=TEXT,
+        insertbackground=CYAN, relief="flat",
+    )
+    search_entry.pack()
+    make_label(search_row, f"{len(rankings)} ranked student(s)",
+               10, color=MUTED).pack(side="right")
+
+    style_treeview()
+    table_frame = tk.Frame(top, bg=BG)
+    table_frame.pack(fill="both", expand=True, padx=22, pady=(4, 10))
+
+    columns = (
+        "rank", "student_id", "name", "major",
+        "courses", "average_points", "average_gpa",
+    )
+    headings = (
+        "Rank", "Student ID", "Student", "Major",
+        "Courses", "Avg Points", "Avg GPA",
+    )
+    widths = (60, 100, 170, 150, 75, 95, 80)
+    tree = ttk.Treeview(
+        table_frame, columns=columns, show="headings",
+        style="D.Treeview", selectmode="browse",
+    )
+    for column, heading, width in zip(columns, headings, widths):
+        tree.heading(column, text=heading)
+        tree.column(column, width=width, anchor="center")
+    tree.column("name", anchor="w")
+    tree.column("major", anchor="w")
+
+    tree.tag_configure("first", background=VANDY_OAK, foreground=TEXT)
+    tree.tag_configure("second", background=VANDY_DARK_GRAY, foreground=TEXT)
+    tree.tag_configure("third", background="#4A381D", foreground=TEXT)
+
+    scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+    tree.pack(fill="both", expand=True)
+
+    def refresh_rankings(*_):
+        query = search_var.get().strip().lower()
+        tree.delete(*tree.get_children())
+        for index, student in enumerate(rankings):
+            searchable = " ".join([
+                student["student_id"], student["name"], student["major"],
+            ]).lower()
+            if query and query not in searchable:
+                continue
+            tag = {
+                1: "first",
+                2: "second",
+                3: "third",
+            }.get(student["rank"], "")
+            tree.insert(
+                "", "end", iid=str(index),
+                values=(
+                    student["rank"],
+                    student["student_id"],
+                    student["name"],
+                    student["major"],
+                    student["courses"],
+                    f"{student['average_points']:.1f}",
+                    f"{student['average_gpa']:.2f}",
+                ),
+                tags=(tag,) if tag else (),
+            )
+
+    search_var.trace_add("write", refresh_rankings)
+    refresh_rankings()
+    search_entry.focus_set()
+    footer_close_btn(top, top.destroy, label="✕  Close")
 
 
 # =============================================================================
